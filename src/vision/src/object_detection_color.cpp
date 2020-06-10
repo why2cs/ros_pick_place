@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
 		cv::Mat processImage = colorImage.clone();
 		for (cv::MatIterator_<cv::Vec3b> it = processImage.begin<cv::Vec3b>(); it != processImage.end<cv::Vec3b>(); ++it) {
-			if (3 * (*it)[0] > (*it)[2] || 3 * (*it)[1] > (*it)[2]) {
+			if (2 * (*it)[0] > (*it)[2] || 2 * (*it)[1] > (*it)[2]) {
 				*it = { 0,0,0 };
 			} 
 		}
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 		processImagePub.publish(processImagePtr);
 
 		vector<cv::Vec3f> circles;
-		HoughCircles(processImage, circles, cv::HOUGH_GRADIENT, 1, 100, 50, 15, 30, 70);
+		HoughCircles(processImage, circles, cv::HOUGH_GRADIENT, 1.5, 100, 300, 20, 30, 70);
 		for (auto &&circleInfo : circles) {
 			circle(colorImage, cv::Point(circleInfo[0], circleInfo[1]), circleInfo[2], cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
 		}
