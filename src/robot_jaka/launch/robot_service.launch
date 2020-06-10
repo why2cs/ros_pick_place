@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="robot_jaka" type="robot_service.py" name="robot_service" output="screen">
+    </node>
+
+</launch>

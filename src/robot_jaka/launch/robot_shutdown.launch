@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="robot_jaka" type="robot_interface.py" name="robot_shutdown" args="shutdown" output="screen">
+    </node>
+
+</launch>
