@@ -12,11 +12,13 @@ void robotMoveToPose(const geometry_msgs::PoseStampedConstPtr &msg)
     if (command == "p")
     {
         robot_jaka::RobotEndMove srv;
-        srv.request.pos = {msg->pose.position.x*1000, msg->pose.position.y*1000, msg->pose.position.z*1000 + 20,
-                           179, 0, 0};
+        // srv.request.pos = {msg->pose.position.x*1000, msg->pose.position.y*1000, msg->pose.position.z*1000 + 20,
+        //                    179, 0, 0};
+        srv.request.pos = {msg->pose.position.x*1000, msg->pose.position.y*1000, msg->pose.position.z*1000 + 200,
+                           -179, 0, -179};
         srv.request.speed = 20;
         robotEndMoveClient.call(srv);
-        auto status = srv.response.status;
+        uint8_t status = srv.response.status;
         if (status){
             ROS_INFO("robot moving ......");
         }else{
@@ -28,7 +30,7 @@ void robotMoveToPose(const geometry_msgs::PoseStampedConstPtr &msg)
         srv.request.pos = {300, 0, 400, 179, 0, 0};
         srv.request.speed = 50;
         robotEndMoveClient.call(srv);
-        auto status = srv.response.status;
+        uint8_t status = srv.response.status;
         if (status){
             ROS_INFO("robot moving ......");
         }

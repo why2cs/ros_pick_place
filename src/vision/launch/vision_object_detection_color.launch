@@ -2,7 +2,8 @@
     <node pkg="robot_jaka" type="robot_service.py" name="robot_service" output="screen">
     </node>
     <node pkg="vision" type="object_detection_color" name="object_detection_color" output="screen">
-        <param name="base2Camera_calibration_url" value="$(find vision)/config/base2Camera_calibration.yaml"/>
-        <param name="camera2End_calibration_url" value="$(find vision)/config/camera2End_calibration.yaml"/>
+        <param name="isEyeInHand" type="bool" value="true"/>
+        <param name="eyeInHand_calibration_url" value="$(find vision)/config/eyeInHand_calibration.yaml"/>
+        <param name="eyeToHand_calibration_url" value="$(find vision)/config/eyeToHand_calibration.yaml"/>
     </node>
 </launch>

@@ -3,16 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/opencv.hpp>
-
-enum HandEyeCalibrationMethod
-{
-    CALIB_HAND_EYE_TSAI         = 0, //!< A New Technique for Fully Autonomous and Efficient 3D Robotics Hand/Eye Calibration @cite Tsai89
-    CALIB_HAND_EYE_PARK         = 1, //!< Robot Sensor Calibration: Solving AX = XB on the Euclidean Group @cite Park94
-    CALIB_HAND_EYE_HORAUD       = 2, //!< Hand-eye Calibration @cite Horaud95
-    CALIB_HAND_EYE_ANDREFF      = 3, //!< On-line Hand-Eye Calibration @cite Andreff99
-    CALIB_HAND_EYE_DANIILIDIS   = 4  //!< Hand-Eye Calibration Using Dual Quaternions @cite Daniilidis98
-};
-
+#include "assist_tools.h"
 
 namespace cv {
 
@@ -695,7 +686,7 @@ static void calibrateHandEyeDaniilidis(const std::vector<Mat>& Hg, const std::ve
 void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
                       InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                       OutputArray R_cam2gripper, OutputArray t_cam2gripper,
-                      HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI)
+                      HandEyeCalibrationMethod method)
 {
     CV_Assert(R_gripper2base.isMatVector() && t_gripper2base.isMatVector() &&
               R_target2cam.isMatVector() && t_target2cam.isMatVector());
