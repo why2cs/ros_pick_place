@@ -3,6 +3,7 @@
     </node>
     <node pkg="vision" type="camera_calibrate_hand_eye" name="camera_calibrate_hand_eye" output="screen">
         <param name="isEyeInHand" type="bool" value="true"/>
+        <param name="camera_intrinsic_calibration_url" value="$(find vision)/config/intrinsic_calibration.yaml"/>
         <param name="eyeInHand_calibration_url" value="$(find vision)/config/eyeInHand_calibration.yaml"/>
         <param name="eyeToHand_calibration_url" value="$(find vision)/config/eyeToHand_calibration.yaml"/>
     </node>

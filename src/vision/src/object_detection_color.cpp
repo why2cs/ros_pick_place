@@ -81,10 +81,10 @@ int main(int argc, char **argv)
 	rs2::video_stream_profile colorstreamprofile = profile.get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
 	// rs2::stream_profile depthstreamprofile = profile.get_stream(RS2_STREAM_DEPTH);
 	rs2_intrinsics intr = colorstreamprofile.get_intrinsics();
-	cv::Matx33f cameraMatrix = {	intr.fx,	0,			intr.ppx,
+	cv::Matx33d cameraMatrix = {	intr.fx,	0,			intr.ppx,
 									0,			intr.fy,	intr.ppy,
 									0,			0,			1 };
-	vector<float> distCoeffs(begin(intr.coeffs), end(intr.coeffs));
+	vector<double> distCoeffs(begin(intr.coeffs), end(intr.coeffs));
 
 	// 获取相机的深度传感器，并将其设置为高精度模式
 	rs2::depth_sensor sensor = profile.get_device().first<rs2::depth_sensor>();

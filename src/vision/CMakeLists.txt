@@ -148,6 +148,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/vision_node.cpp)
 add_executable(imageProcess               src/image_process.cpp)
+add_executable(camera_calibrate           src/camera_calibrate.cpp)
 add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
                                           src/assist_tools
                                           src/calibration_handeye_opencv346.cpp)
@@ -171,6 +172,7 @@ add_executable(vision_command             src/vision_command.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(imageProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(camera_calibrate ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
 target_link_libraries(camera_calibrate_hand_eye ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
 target_link_libraries(object_detection_color ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
 target_link_libraries(vision_command ${catkin_LIBRARIES})

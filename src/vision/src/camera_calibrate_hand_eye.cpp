@@ -18,9 +18,11 @@ int main(int argc, char **argv) {
 
 	// 从ros参数服务器获取手眼标定形式（眼在手外或眼在手上），以及相应的标定文件存储路径
 	// isEyeInHand == true：眼在手上		isEyeInHand == false：眼在手外	
-	bool isEyeInHand;
-	string calibrationInfoUrl;
+	bool isEyeInHand;							// 手眼标定形式
+	string cameraIntrinsicCalibrationUrl;		// 相机内参标定文件路径
+	string calibrationInfoUrl;					// 手眼标定文件路径
 	ros::param::get("camera_calibrate_hand_eye/isEyeInHand",isEyeInHand);
+	ros::param::get("camera_calibrate_hand_eye/camera_intrinsic_calibration_url",cameraIntrinsicCalibrationUrl);
 	if(isEyeInHand){
 		ros::param::get("camera_calibrate_hand_eye/eyeInHand_calibration_url",calibrationInfoUrl);
 	}else{
@@ -54,15 +56,26 @@ int main(int argc, char **argv) {
 	cv::waitKey(3000);
     ROS_INFO("Connected camera success!");
 
+
+	/*
 	// 获取相机color流的配置，并构建相机内参矩阵和畸变向量
 	rs2::pipeline_profile profile = pipe.get_active_profile();
 	rs2::video_stream_profile colorstreamprofile = profile.get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
 	// rs2::stream_profile depthstreamprofile = profile.get_stream(RS2_STREAM_DEPTH);
 	rs2_intrinsics intr=colorstreamprofile.get_intrinsics();
-	cv::Matx33f cameraMatrix = {	intr.fx,	0,			intr.ppx,
+	cv::Matx33d cameraMatrix = {	intr.fx,	0,			intr.ppx,
 									0,			intr.fy,	intr.ppy,
 									0,			0,			1 };
-	vector<float> distCoeffs(begin(intr.coeffs), end(intr.coeffs));
+	vector<double> distCoeffs(begin(intr.coeffs), end(intr.coeffs));
+	*/
+
+	// 读取标定文件中保存的结果（相机内参矩阵和畸变系数）到对应的变量中
+	cv::FileStorage cameraIntrinsicCalibrationFile(cameraIntrinsicCalibrationUrl, cv::FileStorage::READ | cv::FileStorage::FORMAT_YAML);
+	cv::Mat cameraMatrix;
+	vector<double> distCoeffs;
+	cameraIntrinsicCalibrationFile["cameraMatrix"] >> cameraMatrix;
+	cameraIntrinsicCalibrationFile["distCoeffs"] >> distCoeffs;
+	cameraIntrinsicCalibrationFile.release();
 
 
 	cv::namedWindow("Camera Image",cv::WINDOW_NORMAL);		// 设置图像显示窗口属性
@@ -108,34 +121,52 @@ int main(int argc, char **argv) {
 				// 使用opencv提供的相机外参计算函数，传入上面已经获取到的参数，计算标定板坐标系到相机坐标系的坐标变换，并存储到rotateRodriguesVec和translationVec
 				bool hasObjectPosition = cv::solvePnP(objectPoints, circleCenters, cameraMatrix, distCoeffs, rotateRodriguesVec, translationVec);
 				if (hasObjectPosition) {
-					cv::Mat rotateVec;											// 标定板坐标系 ==> 相机坐标系 旋转矩阵
-					cv::Rodrigues(rotateRodriguesVec, rotateVec);				// 将Rodrigues形式的旋转向量转换成旋转矩阵
-					target2CameraRotateVecs.push_back(rotateVec);				// 将本次采集并计算得到的旋转矩阵计算结果存储下来，用于手眼标定的后续计算
-					target2CameraTranslationVecs.push_back(translationVec);		// 将本次采集并计算得到的平移向量计算结果存储下来，用于手眼标定的后续计算
-					
-					cout << "target2CameraRotateVec" << endl << rotateVec << endl;
-					cout << "target2CameraTranslationVec" << endl << translationVec << endl;
+					vector<cv::Point2f> projectImagePoints;		// 用于存储标定板圆心在相机图像中的重投影位置
+					// 使用opencv提供的相机投影图像计算函数，计算标定板圆心在相机图像中的重投影位置，并计算重投影均方根误差
+					cv::projectPoints(objectPoints, rotateRodriguesVec, translationVec, cameraMatrix, distCoeffs, projectImagePoints);
+					double projectOffsetSum = 0;
+					for (int i = 0; i < projectImagePoints.size(); ++i){
+						double projectOffset = sqrt(pow(projectImagePoints[i].x - circleCenters[i].x, 2) 
+												  + pow(projectImagePoints[i].y - circleCenters[i].y, 2));
+						projectOffsetSum += projectOffset;
+					}
+					double projectRMS = projectOffsetSum / projectImagePoints.size();
+					cout << "RMS re-projection error: " << projectRMS;
 
-                    // 请求机械臂的当前位姿，得到[x, y, z, Rx, Ry, Rz]
-					client.call(srv);
-					boost::array<double, 6> position=srv.response.pos;
+					// 当重投影均方根误差在可接受范围内时，本次采集为有效数据，并进一步处理数据
+					if (projectRMS < 0.8){
+						cout << "\t\tData was Accepted!" << endl;
+						cv::Mat rotateVec;											// 标定板坐标系 ==> 相机坐标系 旋转矩阵
+						cv::Rodrigues(rotateRodriguesVec, rotateVec);				// 将Rodrigues形式的旋转向量转换成旋转矩阵
+						target2CameraRotateVecs.push_back(rotateVec);				// 将本次采集并计算得到的旋转矩阵计算结果存储下来，用于手眼标定的后续计算
+						target2CameraTranslationVecs.push_back(translationVec);		// 将本次采集并计算得到的平移向量计算结果存储下来，用于手眼标定的后续计算
+						
+						cout << "target2CameraRotateVec" << endl << rotateVec << endl;
+						cout << "target2CameraTranslationVec" << endl << translationVec << endl;
 
-					cv::Mat end2BaseTranslationVec(3, 1, CV_64FC1);		// 机械臂末端 ==> 机械臂base  平移向量
-					cv::Mat end2BaseRotateVec(3, 3, CV_64FC1);			// 机械臂末端 ==> 机械臂base  旋转矩阵
-	
-					// 由获取到的 [x, y, z]构造 机械臂末端 ==> 机械臂base 的平移向量，并将单位从米转化为毫米
-					end2BaseTranslationVec.at<double>(0, 0) = position[0]*0.001;
-					end2BaseTranslationVec.at<double>(1, 0) = position[1]*0.001;
-					end2BaseTranslationVec.at<double>(2, 0) = position[2]*0.001;
-					// 由获取到的 [Rx, Ry, Rz]构造 机械臂末端 ==> 机械臂base 的旋转矩阵
-					end2BaseRotateVec = eulerAnglesToRotationMatrix(cv::Vec3f(position[3], position[4], position[5]));
+						// 请求机械臂的当前位姿，得到[x, y, z, Rx, Ry, Rz]
+						client.call(srv);
+						boost::array<double, 6> position=srv.response.pos;
 
-					end2BaseTranslationVecs.push_back(end2BaseTranslationVec);	// 将本次采集到的机械臂平移向量存储下来，用于手眼标定的后续计算
-					end2BaseRotateVecs.push_back(end2BaseRotateVec);			// 将本次采集到的机械臂旋转矩阵存储下来，用于手眼标定的后续计算
+						cv::Mat end2BaseTranslationVec(3, 1, CV_64FC1);		// 机械臂末端 ==> 机械臂base  平移向量
+						cv::Mat end2BaseRotateVec(3, 3, CV_64FC1);			// 机械臂末端 ==> 机械臂base  旋转矩阵
+		
+						// 由获取到的 [x, y, z]构造 机械臂末端 ==> 机械臂base 的平移向量，并将单位从米转化为毫米
+						end2BaseTranslationVec.at<double>(0, 0) = position[0]*0.001;
+						end2BaseTranslationVec.at<double>(1, 0) = position[1]*0.001;
+						end2BaseTranslationVec.at<double>(2, 0) = position[2]*0.001;
+						// 由获取到的 [Rx, Ry, Rz]构造 机械臂末端 ==> 机械臂base 的旋转矩阵
+						end2BaseRotateVec = eulerAnglesToRotationMatrix(cv::Vec3f(position[3], position[4], position[5]));
 
-					cout << "end2BaseRotateVec" << endl << end2BaseRotateVec << endl;
-					cout << "end2BaseTranslationVec" << endl<< end2BaseTranslationVec << endl;
-					cout << "*********************************************************" << endl;
+						end2BaseTranslationVecs.push_back(end2BaseTranslationVec);	// 将本次采集到的机械臂平移向量存储下来，用于手眼标定的后续计算
+						end2BaseRotateVecs.push_back(end2BaseRotateVec);			// 将本次采集到的机械臂旋转矩阵存储下来，用于手眼标定的后续计算
+
+						cout << "end2BaseRotateVec" << endl << end2BaseRotateVec << endl;
+						cout << "end2BaseTranslationVec" << endl<< end2BaseTranslationVec << endl;
+						cout << "*********************************************************" << endl;
+					}else{
+						cout << "\t\tData was Rejected!" << endl;
+					}
 				}
 			}
 		}
@@ -157,6 +188,7 @@ int main(int argc, char **argv) {
 					<< "EulerAngles ==> " << rotationMatrixToEulerAngles(camera2EndRotate) << "<==" << endl;
 			cout << "camera2EndTranslation" << endl << camera2EndTranslation << endl;
 
+			// 保存 相机坐标系 ==> 机械臂末端坐标系 标定结果到文件
 			cv::FileStorage camera2EndCalibrationFile(calibrationInfoUrl, cv::FileStorage::WRITE | cv::FileStorage::FORMAT_YAML);
 			camera2EndCalibrationFile << "rotate" << camera2EndRotate;
 			camera2EndCalibrationFile << "translation" << camera2EndTranslation;
