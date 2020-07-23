@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <tf/transform_listener.h>
 #include <librealsense2/rs.hpp>
 #include <librealsense2/rsutil.h>
 #include <opencv2/opencv.hpp>
@@ -6,7 +7,6 @@
 #include <vector>
 #include <string>
 #include "assist_tools.h"
-#include "robot_jaka/RobotEndPosition.h"
 
 using namespace std;
 
@@ -29,9 +29,9 @@ int main(int argc, char **argv) {
 		ros::param::get("camera_calibrate_hand_eye/eyeToHand_calibration_url",calibrationInfoUrl);
 	}
 
-	// 创建一个服务client，用来请求机械臂的当前位姿，以及相应的服务消息
-    ros::ServiceClient client=nh.serviceClient<robot_jaka::RobotEndPosition>("robot_service/robot_end_position");
-	robot_jaka::RobotEndPosition srv;
+	// 创建一个TF监听器，用来获取机械臂的当前位姿
+	tf::TransformListener robotListener;
+	tf::StampedTransform robotTransform;
 
 	// 初始化标定板参数
 	const int boardWidth = 4;					// 标定板列数
@@ -144,26 +144,40 @@ int main(int argc, char **argv) {
 						cout << "target2CameraRotateVec" << endl << rotateVec << endl;
 						cout << "target2CameraTranslationVec" << endl << translationVec << endl;
 
-						// 请求机械臂的当前位姿，得到[x, y, z, Rx, Ry, Rz]
-						client.call(srv);
-						boost::array<double, 6> position=srv.response.pos;
+						// 获取机械臂的当前位姿，得到机械臂末端到机械臂base的坐标变换
+						bool getRobotTransform = robotListener.waitForTransform("base_footprint", "wrist_3_link", ros::Time(0), ros::Duration(2));
+						if (getRobotTransform){
+							robotListener.lookupTransform("base_footprint", "wrist_3_link", ros::Time(0), robotTransform);
+							
+							cv::Mat end2BaseTranslationVec(3, 1, CV_64FC1); // 机械臂末端 ==> 机械臂base  平移向量
+							cv::Mat end2BaseRotateVec(3, 3, CV_64FC1);		// 机械臂末端 ==> 机械臂base  旋转矩阵
 
-						cv::Mat end2BaseTranslationVec(3, 1, CV_64FC1);		// 机械臂末端 ==> 机械臂base  平移向量
-						cv::Mat end2BaseRotateVec(3, 3, CV_64FC1);			// 机械臂末端 ==> 机械臂base  旋转矩阵
-		
-						// 由获取到的 [x, y, z]构造 机械臂末端 ==> 机械臂base 的平移向量，并将单位从米转化为毫米
-						end2BaseTranslationVec.at<double>(0, 0) = position[0]*0.001;
-						end2BaseTranslationVec.at<double>(1, 0) = position[1]*0.001;
-						end2BaseTranslationVec.at<double>(2, 0) = position[2]*0.001;
-						// 由获取到的 [Rx, Ry, Rz]构造 机械臂末端 ==> 机械臂base 的旋转矩阵
-						end2BaseRotateVec = eulerAnglesToRotationMatrix(cv::Vec3f(position[3], position[4], position[5]));
+							// 构造 机械臂末端 ==> 机械臂base 的平移向量，单位:米
+							end2BaseTranslationVec.at<double>(0, 0) = robotTransform.getOrigin().x();
+							end2BaseTranslationVec.at<double>(1, 0) = robotTransform.getOrigin().y();
+							end2BaseTranslationVec.at<double>(2, 0) = robotTransform.getOrigin().z();
+							// 构造 机械臂末端 ==> 机械臂base 的旋转矩阵
+							end2BaseRotateVec.at<double>(0, 0) = robotTransform.getBasis()[0].x();
+							end2BaseRotateVec.at<double>(0, 1) = robotTransform.getBasis()[0].y();
+							end2BaseRotateVec.at<double>(0, 2) = robotTransform.getBasis()[0].z();
+							end2BaseRotateVec.at<double>(1, 0) = robotTransform.getBasis()[1].x();
+							end2BaseRotateVec.at<double>(1, 1) = robotTransform.getBasis()[1].y();
+							end2BaseRotateVec.at<double>(1, 2) = robotTransform.getBasis()[1].z();
+							end2BaseRotateVec.at<double>(2, 0) = robotTransform.getBasis()[2].x();
+							end2BaseRotateVec.at<double>(2, 1) = robotTransform.getBasis()[2].y();
+							end2BaseRotateVec.at<double>(2, 2) = robotTransform.getBasis()[2].z();
 
-						end2BaseTranslationVecs.push_back(end2BaseTranslationVec);	// 将本次采集到的机械臂平移向量存储下来，用于手眼标定的后续计算
-						end2BaseRotateVecs.push_back(end2BaseRotateVec);			// 将本次采集到的机械臂旋转矩阵存储下来，用于手眼标定的后续计算
+							end2BaseTranslationVecs.push_back(end2BaseTranslationVec); // 将本次采集到的机械臂平移向量存储下来，用于手眼标定的后续计算
+							end2BaseRotateVecs.push_back(end2BaseRotateVec);		   // 将本次采集到的机械臂旋转矩阵存储下来，用于手眼标定的后续计算
 
-						cout << "end2BaseRotateVec" << endl << end2BaseRotateVec << endl;
-						cout << "end2BaseTranslationVec" << endl<< end2BaseTranslationVec << endl;
-						cout << "*********************************************************" << endl;
+							cout << "end2BaseRotateVec" << endl
+								 << end2BaseRotateVec << endl;
+							cout << "end2BaseTranslationVec" << endl
+								 << end2BaseTranslationVec << endl;
+							cout << "*********************************************************" << endl;
+						}else{
+							cout << "\t\tRobot Pose get Failed!" << endl;
+						}
 					}else{
 						cout << "\t\tData was Rejected!" << endl;
 					}

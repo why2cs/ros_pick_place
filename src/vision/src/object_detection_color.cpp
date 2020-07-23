@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <tf/transform_listener.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
@@ -10,7 +11,6 @@
 #include <iostream>
 #include <vector>
 #include "assist_tools.h"
-#include "robot_jaka/RobotEndPosition.h"			// 仅用于眼在手上标定形式
 
 using namespace std;
 
@@ -33,9 +33,9 @@ int main(int argc, char **argv)
 		ros::param::get("object_detection_color/eyeToHand_calibration_url",calibrationInfoUrl);
 	}
 
-	// 仅用于眼在手上标定形式！创建一个服务client，用来请求机械臂的当前位姿，以及相应的服务消息
-    ros::ServiceClient client=nh.serviceClient<robot_jaka::RobotEndPosition>("robot_service/robot_end_position");
-	robot_jaka::RobotEndPosition srv;
+	// 创建一个TF监听器，用来获取机械臂的当前位姿
+	tf::TransformListener robotListener;
+	tf::StampedTransform robotTransform;
 
 	// 读取标定文件中保存的结果（旋转矩阵和平移向量）到对应的变量中
 	cv::FileStorage calibrationFile(calibrationInfoUrl, cv::FileStorage::READ | cv::FileStorage::FORMAT_YAML);
@@ -165,31 +165,35 @@ int main(int argc, char **argv)
 			// 在已知 目标 ==> 相机坐标系 的坐标变换基础上，计算 目标 ==> 机械臂base坐标系 的坐标变换target2Base
 			cv::Matx44d target2Base;
 			if (isEyeInHand){
-				// 请求机械臂的当前位姿，得到[x, y, z, Rx, Ry, Rz]
-				client.call(srv);
-				boost::array<double, 6> position = srv.response.pos;
+				// 获取机械臂的当前位姿，得到机械臂末端到机械臂base的坐标变换
+				bool getRobotTransform = robotListener.waitForTransform("base_footprint", "wrist_3_link", ros::Time(0), ros::Duration(2));
+				if (getRobotTransform){
+					robotListener.lookupTransform("base_footprint", "wrist_3_link", ros::Time(0), robotTransform);
+					tf::Vector3 trans=robotTransform.getOrigin();
+					tf::Matrix3x3 rot=robotTransform.getBasis();
 
-				// 由获取到的 [Rx, Ry, Rz]构造 机械臂末端 ==> 机械臂base 的旋转矩阵
-				cv::Mat end2BaseRotate = eulerAnglesToRotationMatrix(cv::Vec3f(position[3], position[4], position[5]));
-				// 构建 机械臂末端 ==> 机械臂base 的坐标变换，并将单位从米转化为毫米
-				cv::Matx44d end2Base={
-					end2BaseRotate.at<double>(0,0), end2BaseRotate.at<double>(0,1), end2BaseRotate.at<double>(0,2), position[0] * 0.001,
-					end2BaseRotate.at<double>(1,0), end2BaseRotate.at<double>(1,1), end2BaseRotate.at<double>(1,2), position[1] * 0.001,
-					end2BaseRotate.at<double>(2,0), end2BaseRotate.at<double>(2,1), end2BaseRotate.at<double>(2,2), position[2] * 0.001,
-					0,								0,								0,								1};
+					// 构建 机械臂末端 ==> 机械臂base 的坐标变换，长度单位:米
+					cv::Matx44d end2Base = {
+						rot[0].x(), 	rot[0].y(), 	rot[0].z(),		trans.x(),
+						rot[1].x(), 	rot[1].y(), 	rot[1].z(),		trans.y(),
+						rot[2].x(), 	rot[2].y(), 	rot[2].z(),		trans.z(),
+						0, 				0, 				0, 				1};
 
-				// 标定形式为眼在手上时，之前读取标定文件并构建的坐标变换矩阵应为 相机坐标系 ==> 机械臂末端坐标系
-				cv::Matx44d& camera2End = calibrationInfo;
-				// 使用 目标 ==> 相机坐标系 的坐标变换，左乘 相机坐标系 ==> 机械臂末端坐标系，再左乘 机械臂末端坐标系 ==> 机械臂base坐标系 的坐标变换
-				// 求得 目标 ==> 机械臂base坐标系 的坐标变换
-				target2Base = end2Base * camera2End * target2Camera;
+					// 标定形式为眼在手上时，之前读取标定文件并构建的坐标变换矩阵应为 相机坐标系 ==> 机械臂末端坐标系
+					cv::Matx44d &camera2End = calibrationInfo;
+					// 使用 目标 ==> 相机坐标系 的坐标变换，左乘 相机坐标系 ==> 机械臂末端坐标系，再左乘 机械臂末端坐标系 ==> 机械臂base坐标系 的坐标变换
+					// 求得 目标 ==> 机械臂base坐标系 的坐标变换
+					target2Base = end2Base * camera2End * target2Camera;
+				}else{
+					cout << "\t\tRobot Pose get Failed!" << endl;
+				}
 			}else{
-				// 标定形式为眼在手外时，之前读取标定文件并构建的坐标变换矩阵应为 相机坐标系 ==> 机械臂base坐标系
-				cv::Matx44d& camera2Base = calibrationInfo;
-				// 使用 目标 ==> 相机坐标系 的坐标变换，左乘 相机坐标系 ==> 机械臂base坐标系 的坐标变换
-				// 求得 目标 ==> 机械臂base坐标系 的坐标变换
-				target2Base = camera2Base * target2Camera;
-			}
+					// 标定形式为眼在手外时，之前读取标定文件并构建的坐标变换矩阵应为 相机坐标系 ==> 机械臂base坐标系
+					cv::Matx44d &camera2Base = calibrationInfo;
+					// 使用 目标 ==> 相机坐标系 的坐标变换，左乘 相机坐标系 ==> 机械臂base坐标系 的坐标变换
+					// 求得 目标 ==> 机械臂base坐标系 的坐标变换
+					target2Base = camera2Base * target2Camera;
+				}
 			cout << "target2Base: " << target2Base << endl;
 
 			// 使用target2Base中的平移向量部分，构建PoseStamped消息并发布
