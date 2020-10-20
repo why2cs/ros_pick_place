@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="vision" type="camera_calibrate" name="camera_calibrate" output="screen">
-        <param name="intrinsic_calibration_url" value="$(find vision)/config/intrinsic_calibration.yaml"/>
-    </node>
-
-</launch>

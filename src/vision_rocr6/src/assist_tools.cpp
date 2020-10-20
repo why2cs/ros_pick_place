@@ -6,49 +6,51 @@ using namespace cv;
 
 Mat eulerAnglesToRotationMatrix(const Vec3f &angleTheta)
 {
-	Vec3f radianTheta = angleTheta * M_PI / 180.;
+    Vec3f radianTheta = angleTheta * M_PI / 180.;
 
-	// Calculate rotation about x axis
-	Mat R_x = (Mat_<double>(3, 3) <<
-		1,				0,				0,
-		0,				cos(radianTheta[0]),	-sin(radianTheta[0]),
-		0,				sin(radianTheta[0]),	cos(radianTheta[0])
-		);
-	// Calculate rotation about y axis
-	Mat R_y = (Mat_<double>(3, 3) <<
-		cos(radianTheta[1]),	0,				sin(radianTheta[1]),
-		0,				1,				0,
-		-sin(radianTheta[1]),	0,				cos(radianTheta[1])
-		);
-	// Calculate rotation about z axis
-	Mat R_z = (Mat_<double>(3, 3) <<
-		cos(radianTheta[2]),	-sin(radianTheta[2]), 0,
-		sin(radianTheta[2]),	cos(radianTheta[2]),	0,
-		0,				0,				1
-		);
-	// Combined rotation matrix
-	// JAKA 绕基坐标系 x y z依次旋转 Rx Ry Rz角度
-	Mat R = R_z * R_y * R_x;
-	return R;
+    // Calculate rotation about x axis
+    Mat R_x = (Mat_<double>(3, 3) <<
+        1,				0,				0,
+        0,				cos(radianTheta[2]),	-sin(radianTheta[2]),
+        0,				sin(radianTheta[2]),	cos(radianTheta[2])
+        );
+    // Calculate rotation about y axis
+    Mat R_y = (Mat_<double>(3, 3) <<
+        cos(radianTheta[1]),	0,				sin(radianTheta[1]),
+        0,				1,				0,
+        -sin(radianTheta[1]),	0,				cos(radianTheta[1])
+        );
+    // Calculate rotation about z axis
+    Mat R_z = (Mat_<double>(3, 3) <<
+        cos(radianTheta[0]),	-sin(radianTheta[0]),   0,
+        sin(radianTheta[0]),	cos(radianTheta[0]),    0,
+        0,				0,				1
+        );
+    // Combined rotation matrix
+    // 自主机械臂是基于基坐标系依次绕 z y x轴旋转r p y角度
+    return R_x * R_y * R_z;
 }
 
 
 Vec3f rotationMatrixToEulerAngles(const Mat &R)
 {
-	float sy = sqrt(R.at<double>(0, 0) * R.at<double>(0, 0) + R.at<double>(1, 0) * R.at<double>(1, 0));
-	bool singular = sy < 1e-6; // If
+    double r, p, y;
+    if(abs(abs(R.at<double>(0,2))-1)<1e-6)
+    {
+        r=0;
+        if(R.at<double>(0,2)>0){
+            y=atan2(R.at<double>(2,1),R.at<double>(1,1));
+        }else{
+            y=-atan2(R.at<double>(1,0),R.at<double>(2,0));
+        }
+        p=asin(R.at<double>(0,2));
+    }else{
+        r=-atan2(R.at<double>(0,1),R.at<double>(0,0));
+        y=-atan2(R.at<double>(1,2),R.at<double>(2,2));
+        p=atan(R.at<double>(0,2)*cos(r)/R.at<double>(0,0));
+    }
 
-	float x, y, z;
-	if (!singular) {
-		x = atan2(R.at<double>(2, 1), R.at<double>(2, 2));
-		y = atan2(-R.at<double>(2, 0), sy);
-		z = atan2(R.at<double>(1, 0), R.at<double>(0, 0));
-	} else {
-		x = atan2(-R.at<double>(1, 2), R.at<double>(1, 1));
-		y = atan2(-R.at<double>(2, 0), sy);
-		z = 0;
-	}
-	return Vec3f(x, y, z) * 180. / M_PI;
+    return Vec3d(r, p, y) * 180. / M_PI;
 }
 
 

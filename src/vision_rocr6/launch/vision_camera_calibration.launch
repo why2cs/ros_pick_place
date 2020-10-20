@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="vision_rocr6" type="camera_calibrate" name="camera_calibrate" output="screen">
+        <param name="intrinsic_calibration_url" value="$(find vision_rocr6)/config/intrinsic_calibration.yaml"/>
+    </node>
+
+</launch>

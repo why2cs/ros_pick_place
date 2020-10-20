@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(vision)
+project(vision_rocr6)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -15,7 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   # sensor_msgs
   image_transport
-  robot_jaka
+  rocr6_msgs REQUIRED
+  robot_jaka REQUIRED
 )
 
 ## System dependencies are found with CMake's conventions
@@ -115,7 +116,7 @@ catkin_package(
   # CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
   #                 sensor_msgs image_transport
     CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
-                    image_transport
+                    image_transport rocr6_msgs
 
 # DEPENDS 
 )
