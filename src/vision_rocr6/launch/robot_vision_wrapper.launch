@@ -1,0 +1,18 @@
+<launch>
+    <include file="$(find rocr6_bringup)/launch/usr_bringup.launch" />
+    <node pkg="vision_rocr6" type="robot_vision_wrapper.py" name="robot_vision_wrapper" output="screen">
+        <param name="vision_server_ip" type="str" value="192.168.6.186"/>
+        <param name="vision_server_port" type="int" value="12312"/>
+        <param name="object_compensation_XYZ" type="str" value="0, 0, 0"/>
+        <param name="use_input_RPY" type="bool" value="true"/>
+        <param name="object_rotate_RPY" type="str" value="0, 0, 0"/>
+        <param name="object_pre_pose_offset_XYZRPY" type="str" value="0, 0, 0, 0, 0, 0"/>
+        <param name="pick_pre_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="pick_pre_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="pick_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="pick_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="place_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="place_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+    </node>
+
+</launch>

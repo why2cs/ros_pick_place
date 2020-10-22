@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   # sensor_msgs
   image_transport
   rocr6_msgs REQUIRED
-  robot_jaka REQUIRED
+  g3p_msgs REQUIRED
 )
 
 ## System dependencies are found with CMake's conventions
@@ -116,7 +116,7 @@ catkin_package(
   # CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
   #                 sensor_msgs image_transport
     CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
-                    image_transport rocr6_msgs
+                    image_transport rocr6_msgs g3p_msgs
 
 # DEPENDS 
 )
@@ -149,14 +149,10 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/vision_node.cpp)
-add_executable(imageProcess               src/image_process.cpp)
 add_executable(camera_calibrate           src/camera_calibrate.cpp)
 add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
                                           src/assist_tools
                                           src/calibration_handeye_opencv346.cpp)
-add_executable(object_detection_color     src/object_detection_color.cpp
-                                          src/assist_tools)
-add_executable(vision_command             src/vision_command.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -173,11 +169,8 @@ add_executable(vision_command             src/vision_command.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(imageProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(camera_calibrate ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
 target_link_libraries(camera_calibrate_hand_eye ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
-target_link_libraries(object_detection_color ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${realsense2_LIBRARY})
-target_link_libraries(vision_command ${catkin_LIBRARIES})
 
 #############
 ## Install ##

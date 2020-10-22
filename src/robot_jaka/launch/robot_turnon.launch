@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="robot_jaka" type="robot_interface.py" name="robot_turnon" args="turnon" output="screen">
-    </node>
-
-</launch>

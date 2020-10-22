@@ -1,6 +1,5 @@
 <launch>
-    <node pkg="robot_jaka" type="robot_service.py" name="robot_service" output="screen">
-    </node>
+    <include file="$(find rocr6_bringup)/launch/usr_bringup.launch" />
     <node pkg="vision_rocr6" type="camera_calibrate_hand_eye" name="camera_calibrate_hand_eye" output="screen">
         <param name="isEyeInHand" type="bool" value="false"/>
         <param name="camera_intrinsic_calibration_url" value="$(find vision_rocr6)/config/intrinsic_calibration.yaml"/>
