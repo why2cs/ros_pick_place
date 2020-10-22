@@ -1,18 +1,32 @@
 <launch>
     <include file="$(find rocr6_bringup)/launch/usr_bringup.launch" />
     <node pkg="vision_rocr6" type="robot_vision_wrapper.py" name="robot_vision_wrapper" output="screen">
-        <param name="vision_server_ip" type="str" value="192.168.6.186"/>
-        <param name="vision_server_port" type="int" value="12312"/>
-        <param name="object_compensation_XYZ" type="str" value="0, 0, 0"/>
+        <!-- 设置视觉服务器地址参数：ip，port -->
+        <param name="vision_server_ip" type="str" value="192.168.3.2"/>
+        <param name="vision_server_port" type="int" value="18080"/>
+
+        <!-- 抓取点位置在XYZ方向的补偿，单位：米 -->
+        <param name="object_compensation_XYZ" type="str" value="0.1, 0, 0"/>
+        <!-- 抓取点姿态设置，将use_input_RPY设置为true时，将使用object_rotate_RPY参数值，单位：弧度；设置为false时，将使用视觉服务器反馈的值 -->
         <param name="use_input_RPY" type="bool" value="true"/>
-        <param name="object_rotate_RPY" type="str" value="0, 0, 0"/>
-        <param name="object_pre_pose_offset_XYZRPY" type="str" value="0, 0, 0, 0, 0, 0"/>
+        <param name="object_rotate_RPY" type="str" value="0, -1.57, 1.57"/>
+
+        <!-- 抓取逼近点（抓取前进入位置及抓取后退出位置）设置，其值为相对于抓取点在XYZRPY方向的偏移量，单位：米，弧度 -->
+        <param name="object_pre_pose_offset_XYZRPY" type="str" value="0.2, 0, 0, 0, 0, 0"/>
+
+        <!-- 过渡点设置，其值为六个轴的关节角度，单位：弧度。
+        抓取动作流程： pick_pre_pose_1 -> pick_pre_pose_2
+                    -> 抓取逼近点 -> 抓取点 -> 夹爪闭合 -> 抓取逼近点
+                    -> pick_late_pose_1 -> pick_late_pose_2 -> 夹爪张开
+                    -> place_late_pose_1 -> place_late_pose_2
+        如果将过渡点关节值设置为"-1, -1, -1, -1, -1, -1"，则表示不使用该过渡点 -->
         <param name="pick_pre_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
         <param name="pick_pre_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
         <param name="pick_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <param name="pick_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="pick_late_pose_2_joint" type="str" value="-1.57, -0.17, -1.9, 0.49, 1.57, 0"/>
         <param name="place_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <param name="place_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
+        <param name="place_late_pose_2_joint" type="str" value="0, 0, 0, 0, 0, 0"/>
+        
     </node>
 
 </launch>

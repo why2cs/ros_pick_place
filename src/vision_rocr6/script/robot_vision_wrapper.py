@@ -65,7 +65,12 @@ class RobotVisionWrapper:
             self.inputResponding = True
             if self.visionIsConnected:
                 matrix = self.visionObjectRequest(str(msg.data))
-                self.robotPickAndPlace(matrix)
+                if numpy.all(matrix == 0):
+                    rospy.logwarn("The target object is not detected !")
+                elif numpy.all(matrix == -1):
+                    rospy.logwarn("Illegal input, please re-enter!")
+                else:
+                    self.robotPickAndPlace(matrix)
             else:
                 rospy.logfatal("Need to connect the VisionServer first, please try to restart this node !")
             self.inputResponding = False
@@ -121,7 +126,7 @@ class RobotVisionWrapper:
     def robotJointMoveL(self, valueList):
         while self.robotStatus.status != 3 and not rospy.is_shutdown():
             rospy.sleep(1)
-        if self.robotStatus.status == 3 and valueList != [-1,-1,-1,-1,-1,-1]:
+        if self.robotStatus.status == 3 and valueList != (-1,-1,-1,-1,-1,-1):
             self.robotJointMove(valueList[0], valueList[1], valueList[2], valueList[3], valueList[4], valueList[5])
             rospy.sleep(1)
 
@@ -134,7 +139,7 @@ class RobotVisionWrapper:
     def robotCartesianMoveL(self, valueList):
         while self.robotStatus.status != 3 and not rospy.is_shutdown():
             rospy.sleep(1)
-        if self.robotStatus.status == 3 and valueList != [-1,-1,-1,-1,-1,-1]:
+        if self.robotStatus.status == 3 and valueList != (-1,-1,-1,-1,-1,-1):
             self.robotCartesianMove(valueList[0], valueList[1], valueList[2], valueList[3], valueList[4], valueList[5])
             rospy.sleep(1)
 
@@ -187,11 +192,12 @@ class RobotVisionWrapper:
         self.robotCartesianMoveL(self.robotMatrix2PrePose(pose))
         self.robotCartesianMoveL(pose)
         self.robotGripper3ChangeStateL(0)
+        self.robotCartesianMoveL(self.robotMatrix2PrePose(pose))
         self.robotJointMoveL(self.pickLatePose1Joint)
         self.robotJointMoveL(self.pickLatePose2Joint)
+        self.robotGripper3ChangeStateL(10)
         self.robotJointMoveL(self.placeLatePose1Joint)
         self.robotJointMoveL(self.placeLatePose2Joint)
-        self.robotGripper3ChangeStateL(10)
 
 
 if __name__ == "__main__":
@@ -218,8 +224,6 @@ if __name__ == "__main__":
     wrapper.startVision()
     rospy.sleep(10)
 
-    # m=numpy.matlib.rand((4, 4))
-    # wrapper.robotPickAndPlace(m)
     rospy.spin()
 
     wrapper.stopVision()
