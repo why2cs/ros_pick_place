@@ -11,10 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   message_generation
-  tf
-  cv_bridge
+  # tf
+  # cv_bridge
   # sensor_msgs
-  image_transport
+  # image_transport
   rocr6_msgs REQUIRED
   g3p_msgs REQUIRED
 )
@@ -24,7 +24,17 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(realsense2 REQUIRED)
 
-
+if(OpenCV_VERSION VERSION_LESS "4.0.0")
+  if(OpenCV_VERSION VERSION_LESS "3.4.6")
+    add_definitions(-DCUSTOM_CALIBRATE_HAND_EYE_API)
+    set(CUSTOM_CALIBRATE_HAND_EYE_API TRUE)
+    message(STATUS "OpenCV version: " ${OpenCV_VERSION} ", use custom defined calibrateHandEye API")
+  else()
+    message(STATUS "OpenCV version: " ${OpenCV_VERSION}  ", use OpenCV calibrateHandEye API")
+  endif()
+else()
+  message(WARNING "OpenCV version: " ${OpenCV_VERSION}  ", use OpenCV calibrateHandEye API, and maybe not compatible with ROS-1")
+endif()
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -111,12 +121,11 @@ find_package(realsense2 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+    INCLUDE_DIRS include
 #  LIBRARIES vision
-  # CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
-  #                 sensor_msgs image_transport
-    CATKIN_DEPENDS  roscpp rospy message_runtime cv_bridge
-                    image_transport rocr6_msgs g3p_msgs
+    CATKIN_DEPENDS  roscpp rospy message_runtime 
+                    # cv_bridge sensor_msgs image_transport
+                    rocr6_msgs g3p_msgs
 
 # DEPENDS 
 )
@@ -150,9 +159,14 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/vision_node.cpp)
 add_executable(camera_calibrate           src/camera_calibrate.cpp)
-add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
-                                          src/assist_tools
-                                          src/calibration_handeye_opencv346.cpp)
+if(CUSTOM_CALIBRATE_HAND_EYE_API)
+  add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
+                                            src/assist_tools.cpp
+                                            src/calibration_handeye_opencv346.cpp)
+else()
+  add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
+                                            src/assist_tools.cpp)
+endif()
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -164,6 +178,8 @@ add_executable(camera_calibrate_hand_eye  src/camera_calibrate_hand_eye.cpp
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # add_dependencies(imageProcess ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(camera_calibrate ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(camera_calibrate_hand_eye ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node

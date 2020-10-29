@@ -4,6 +4,8 @@
 // 来自 opencv-3.4.6 版本的辅助工具
 // 由于 ROS kinetic 发行版中自带的 opencv-3.3.1 中没有相应函数，因此在此处引入相应实现
 
+#ifdef CUSTOM_CALIBRATE_HAND_EYE_API
+
 enum HandEyeCalibrationMethod
 {
     CALIB_HAND_EYE_TSAI         = 0, //!< A New Technique for Fully Autonomous and Efficient 3D Robotics Hand/Eye Calibration @cite Tsai89
@@ -21,7 +23,7 @@ namespace cv
                           HandEyeCalibrationMethod method = CALIB_HAND_EYE_TSAI);
 }
 
-
+#endif
 
 
 // 来自自定义的辅助工具

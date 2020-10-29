@@ -54,6 +54,7 @@ Vec3f rotationMatrixToEulerAngles(const Mat &R)
 }
 
 
+// 弃用，供参考
 void Tsai_HandEye(Mat& Hcg, vector<Mat>& Hgij, vector<Mat>& Hcij)
 {
 	CV_Assert(Hgij.size() == Hcij.size());

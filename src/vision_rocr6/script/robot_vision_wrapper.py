@@ -114,7 +114,7 @@ class RobotVisionWrapper:
         self.visionSocket.sendall(objectNo.encode("ascii"))
         # test=pickle.dumps(matrix,protocol=0)
         matrix = pickle.loads(self.visionSocket.recv(1024))
-        rospy.loginfo("objectNo:[%s]\nobjectPosMatrix: %s", objectNo, matrix)
+        rospy.loginfo("objectNo:[%s]", objectNo)
         return matrix
 
     def robotJointMove(self, j1, j2, j3, j4, j5, j6):   #单位： 弧度
@@ -144,9 +144,9 @@ class RobotVisionWrapper:
             rospy.sleep(1)
 
     def robotMatrix2Pose(self, matrix):
-        x = matrix[0,3] + self.objectCompensationXYZ[0]
-        y = matrix[1,3] + self.objectCompensationXYZ[1]
-        z = matrix[2,3] + self.objectCompensationXYZ[2]
+        x = round(matrix[0,3] + self.objectCompensationXYZ[0], 2)
+        y = round(matrix[1,3] + self.objectCompensationXYZ[1], 2)
+        z = round(matrix[2,3] + self.objectCompensationXYZ[2], 2)
 
         Rr, Rp, Ry = None, None, None
         if self.useInputRPY:
@@ -191,11 +191,11 @@ class RobotVisionWrapper:
         self.robotJointMoveL(self.pickPrePose2Joint)
         self.robotCartesianMoveL(self.robotMatrix2PrePose(pose))
         self.robotCartesianMoveL(pose)
-        self.robotGripper3ChangeStateL(0)
-        self.robotCartesianMoveL(self.robotMatrix2PrePose(pose))
+        # self.robotGripper3ChangeStateL(0)
+        # self.robotCartesianMoveL(self.robotMatrix2PrePose(pose))
         self.robotJointMoveL(self.pickLatePose1Joint)
         self.robotJointMoveL(self.pickLatePose2Joint)
-        self.robotGripper3ChangeStateL(10)
+        # self.robotGripper3ChangeStateL(10)
         self.robotJointMoveL(self.placeLatePose1Joint)
         self.robotJointMoveL(self.placeLatePose2Joint)
 
