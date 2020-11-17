@@ -1,12 +1,24 @@
 <launch>
     <include file="$(find rocr6_bringup)/launch/usr_bringup.launch" />
+    <include file="$(find g3p_driver)/launch/hw_link.launch" />
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen" respawn="false"/>
+    <node pkg="vision_rocr6" type="joy_teleop.py" name="joy_teleop" output="screen">
+        <param name="x_speed_scale"  value="0.8" />
+        <!-- <param name="y_speed_scale"  value="0.6" /> -->
+        <param name="w_speed_scale"  value="1.6" />
+        <!-- <param name="x_speed_moment"  value="1000.0" /> -->
+        <!-- <param name="w_speed_moment"  value="1000.0" /> -->
+        <remap from="/cmd_vel" to="/raw_cmd_vel"/>	
+        <!-- <remap from="/cmd_vel" to="/zeus_speed"/> -->
+    </node>
+
     <node pkg="vision_rocr6" type="robot_vision_wrapper.py" name="robot_vision_wrapper" output="screen">
         <!-- 设置视觉服务器地址参数：ip，port -->
         <param name="vision_server_ip" type="str" value="127.0.0.1"/>
         <param name="vision_server_port" type="int" value="18080"/>
 
         <!-- 抓取点位置在XYZ方向的补偿，单位：米 -->
-        <param name="object_compensation_XYZ" type="str" value="0, 0, -0.15"/>
+        <param name="object_compensation_XYZ" type="str" value="0, 0, -0.16"/>
         <!-- 抓取点姿态设置，将use_input_RPY设置为true时，将使用object_rotate_RPY参数值，单位：弧度；设置为false时，将使用视觉服务器反馈的值 -->
         <param name="use_input_RPY" type="bool" value="true"/>
         <param name="object_rotate_RPY" type="str" value="0,0,0"/>
@@ -16,7 +28,7 @@
         朝向：右        0，-90， 90 -->
 
         <!-- 抓取逼近点（抓取前进入位置及抓取后退出位置）设置，其值为相对于抓取点在XYZRPY方向的偏移量，单位：米，弧度 -->
-        <param name="object_pre_pose_offset_XYZRPY" type="str" value="0, 0, -0.05, 0, 0, 0"/>
+        <param name="object_pre_pose_offset_XYZRPY" type="str" value="0, 0, -0.10, 0, 0, 0"/>
 
         <!-- 过渡点设置，其值为六个轴的关节角度，单位：弧度。
         抓取动作流程： pick_pre_pose_1 -> pick_pre_pose_2
@@ -27,12 +39,11 @@
         <param name="pick_pre_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
         <param name="pick_pre_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
         <param name="pick_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <param name="pick_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <!-- <param name="pick_late_pose_2_joint" type="str" value="-1.57, -0.17, -1.9, 0.49, 1.57, 0"/> -->
+        <!-- <param name="pick_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/> -->
+        <param name="pick_late_pose_2_joint" type="str" value="-1.5, 0.2, -2.0, 0.2, 1.57, 0"/>
         <param name="place_late_pose_1_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <param name="place_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/>
-        <!-- <param name="place_late_pose_2_joint" type="str" value="0, 0, 0, 0, 0, 0"/> -->
+        <!-- <param name="place_late_pose_2_joint" type="str" value="-1, -1, -1, -1, -1, -1"/> -->
+        <param name="place_late_pose_2_joint" type="str" value="0.0, 0.1, 1.8, -0.3, 1.6, 1.5"/>
         
     </node>
-
 </launch>
